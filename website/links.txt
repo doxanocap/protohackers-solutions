@@ -1,3 +1,16 @@
 1)API architecture https://github.com/zhashkevych/todo-app
 2)https://gowebexamples.com/
 3)https://www.practical-go-lessons.com/chap-35-build-an-http-client
+4)https://blog.mclaughlinsoftware.com/2022/02/12/configure-postgresql-14/
+
+/// *** Guide to OPEN postgres DATABASE on windows 11 *** \\\
+                    OPEN TERMINAL then
+    1. set PATH=%PATH%;C:\Program Files\PostgreSQL\14\bin;
+2. password
+
+/// PostgerSQL - quick guide \\\
+1. SELECT * FROM <name_of_table> WHERE <if statement> AND <if statement> OR;
+2. INSERT INTO <name_of_table> (id,email,password) VALUES (n,'abcde@efg','qwerty123')
+3. UPDATE <name_of_table> SET <f.e. email = 'ab@ef'> WHERE <show which elements needs to be changed // id = 1>
+4. DELETE FROM <name_of_table> WHERE <show which one to delete // id = 1>
+

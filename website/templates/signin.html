@@ -1,0 +1,19 @@
+{{ define "signin"}}
+{{ template "header"}}
+<main class="w-100 m-auto" style="max-width: 500px">
+    <h1 style="height: 100px"></h1>
+    <form>
+        <img class="mb-4" src="/static/img/logo.jpg" alt="" width="200" height="150">
+        <h1 class="h1 mb-4 ">Welcome to the Grindset!</h1>
+        <div class="form-floating">
+            <input type="email" name="email" class="form-control" id="floatingInput" placeholder="name@example.com">
+            <label for="floatingInput" class="fw-light fst-italic">Email address</label>
+        </div>
+        <div class="form-floating">
+            <input type="password" name="password" class="form-control " id="floatingPassword" placeholder="Password">
+            <label for="floatingPassword" class="fw-light fst-italic">Password</label>
+        </div>
+        <button class="w-100 mt-3 btn btn-lg btn-outline-dark" type="submit"><b>Sign in</b></button>
+    </form>
+{{ template "footer"}}
+{{ end }}

@@ -1,28 +1,32 @@
 {{ define "index"}}
 {{ template "header"}}
-<body class="text-center">
-    <main class="form-signin w-100 m-auto">
-        <form>
-            <img class="mb-4" src="/static/img/logo.jpg" alt="" width="150" height="150">
-            <h1 class="h2 mb-3 ">Please sign in</h1>
-
-            <div class="form-floating">
-            <input type="email" class="form-control" id="floatingInput" placeholder="name@example.com">
-            <label for="floatingInput" class="h6 fw-light fst-italic singin-main-text">Email address</label>
+<main class="w-100" style="max-width: 100%">
+    <h1 style="height: 100px"></h1>
+    <section class="text-center container mt-5">
+        <div class="row ">
+            <div class="col-lg-6 col-md-8 mx-auto">
+                <h1 class="fw-light">Welcome to the Grindset!</h1>
+                <p class="mt-4">Start recording the time you working hard on your dream, to keep the pace and stay motivated. Record your daily planes and stay focused. Working with your friends in classes makes Grind even more efficient. </p>
             </div>
-            <div class="form-floating">
-            <input type="password" class="form-control" id="floatingPassword" placeholder="Password">
-            <label for="floatingPassword" class="h6 fw-light fst-italic singin-main-text">Remember me</label>
+        </div>
+    </section>
+    <div class="container py-4">
+        <div class="row align-items-md-stretch">
+            <div class="col-md-6">
+                <div class="h-100 p-5 text-white bg-dark rounded-3">
+                    <h2>System of Classes</h2>
+                    <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+                    <button class="btn btn-outline-light" type="button">Example button</button>
+                </div>
             </div>
-
-            <div class="checkbox mb-3">
-            <label class="h5 mb-1 mt-1 border-light">
-                <input type="checkbox" value="remember-me" > Remember me
-            </label>
+            <div class="col-md-6">
+                <div class="h-100 p-5 bg-light border rounded-3">
+                    <h2>Record your productivity</h2>
+                    <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+                    <button class="btn btn-outline-secondary" type="button">Example button</button>
+                </div>
             </div>
-            <button class="w-100 btn btn-lg btn-primary" type="submit">Sign in</button>
-            <p class="mt-5 mb-3 text-muted">&copy; 2017–2022</p>
-        </form>
-    </main>
-</body>
+        </div>
+    </div>
+{{ template "footer"}}
 {{ end }}
