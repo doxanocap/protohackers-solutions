@@ -16,7 +16,7 @@ const (
 	port     = 5432
 	user     = "postgres"
 	password = "eldoseldos"
-	dbname   = "signin_page"
+	dbname   = "grindset"
 )
 
 type Users struct {
