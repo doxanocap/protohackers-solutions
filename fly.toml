@@ -1,6 +1,6 @@
-# fly.toml file generated for doxa-smoke-test on 2022-12-02T21:39:19+06:00
+# fly.toml file generated for proto-solutions on 2022-12-03T00:40:16+06:00
 
-app = "doxa-smoke-test"
+app = "proto-solutions"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []

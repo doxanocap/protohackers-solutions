@@ -2,12 +2,23 @@ package main
 
 // import necessary packages
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"os"
 )
+
+type Prime struct {
+	Method string `json:"method"`
+	Number int `json:"number"`
+}
+
+type Result struct {
+	Method string `json:"method"`
+	Prime bool `json:"prime"`
+}
 
 func main() {
 	port := "8080"
@@ -17,7 +28,7 @@ func main() {
 
 	tcp, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 	if err != nil {
-		log.Fatalf("can't listen on %d/tcp: %s", port, err)
+		log.Fatalf("can't listen on %s/tcp: %s", port, err)
 	}
 
 	fmt.Println("listening on port: ", port)
@@ -25,18 +36,46 @@ func main() {
 	for {
 		conn, err := tcp.Accept()
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(2)
+			fmt.Println(err.Error())
+			return
 		}
 
 		go func(conn net.Conn) {
-			_, err = io.Copy(conn, conn)
+			defer conn.Close()
+			fmt.Println("Connection from:",conn.RemoteAddr())
+			
+			data, err := bufio.NewReader(conn).ReadString('\n')
 			if err != nil {
 				fmt.Println(err.Error())
-				os.Exit(3)
+				return
 			}
-			fmt.Println(conn.RemoteAddr())
-			defer conn.Close()
+
+			var raw Prime			
+			err = json.Unmarshal([]byte(data),&raw)
+			if err != nil || raw.Method != "isPrime" || raw.Number <= 0 {
+				fmt.Println(err.Error())
+				conn.Write([]byte(data))
+				conn.Close()
+				return
+			}
+
+			isPrime := true
+			for i := 2; i < raw.Number; i++ {
+				if raw.Number % i == 0 {
+					isPrime = false
+					break
+				}
+			}
+
+			res, err := json.Marshal(Result{Method:"isPrime", Prime: isPrime}) 
+			
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+
+			conn.Write(res)
+
 		}(conn)
 	}
 }
