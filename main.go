@@ -12,7 +12,7 @@ import (
 
 type Prime struct {
 	Method string `json:"method"`
-	Number int `json:"number"`
+	Number *float64 `json:"number"`
 }
 
 type Result struct {
@@ -36,32 +36,32 @@ func main() {
 	for {
 		conn, err := tcp.Accept()
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("tcp err",err.Error())
 			return
 		}
 
 		go func(conn net.Conn) {
-			defer conn.Close()
 			fmt.Println("Connection from:",conn.RemoteAddr())
 			
 			data, err := bufio.NewReader(conn).ReadString('\n')
 			if err != nil {
-				fmt.Println(err.Error())
+				fmt.Println("reading:",err.Error())
 				return
 			}
 
 			var raw Prime			
-			err = json.Unmarshal([]byte(data),&raw)
-			if err != nil || raw.Method != "isPrime" || raw.Number <= 0 {
+			
+			if err = json.Unmarshal([]byte(data),&raw); err != nil || raw.Method != "isPrime" || *raw.Number <= 0 || raw.Number == nil {
 				fmt.Println(err.Error())
 				conn.Write([]byte(data))
 				conn.Close()
 				return
 			}
+			isWholeNumber := *raw.Number == float64(int(*raw.Number))
 
 			isPrime := true
-			for i := 2; i < raw.Number; i++ {
-				if raw.Number % i == 0 {
+			for i := 2; i < int(*raw.Number); i++ {
+				if int(*raw.Number) % i == 0 {
 					isPrime = false
 					break
 				}
@@ -69,13 +69,15 @@ func main() {
 
 			res, err := json.Marshal(Result{Method:"isPrime", Prime: isPrime}) 
 			
-			if err != nil {
+			if err != nil || !isWholeNumber {
 				fmt.Println(err.Error())
+				conn.Write([]byte("invalid"))
+				conn.Close()
 				return
 			}
 
 			conn.Write(res)
-
+			conn.Close()
 		}(conn)
 	}
 }
