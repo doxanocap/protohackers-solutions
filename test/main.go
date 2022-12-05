@@ -2,8 +2,6 @@ package main
 
 // import necessary packages
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -14,17 +12,13 @@ import (
 
 func main() {
 	//fmt.Println((65*10 + 71*10 + 20*69 + 89*10 + 88*5 + 25*80 + 10*100 + 5*100) / 100)
-
-	// use the FormatInt() function to convert decimal to hexadecimal
-	// store the result in output variable
-	buf := new(bytes.Buffer)
-	var num int64 = 257
-	err := binary.Write(buf, binary.LittleEndian, num)
-	if err != nil {
-		fmt.Println("binary.Write failed:", err)
-	}
-	fmt.Printf("% x", buf)
-
+	num1 := int64(101)
+ 
+	hex_num := strconv.FormatInt(num1, 16)
+	bytes := make([]byte,4)
+	bytes[3] = hex_num	
+	fmt.Println("hexadecimal num: ", hex_num)
+ 
 	// str := ""
 	// bytes := []byte{0, 0, 39, 49}
 	// for _, v := range bytes {
@@ -63,6 +57,24 @@ func main() {
 	// 	}(i)
 	// }
 	// wg.Wait()
+}
+
+func byteToString(bytes []byte) string {
+	str := ""
+	for _, v := range bytes {
+		if v < 10 {
+			str += "0" + string(v+48)
+			continue
+		}
+		temp := ""
+		for v > 0 {
+			digit := v % 10
+			temp = string(digit+48) + temp
+			v = v / 10
+		}
+		str += temp
+	}
+	return str
 }
 
 func sendRequest(i int) {

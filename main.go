@@ -2,8 +2,6 @@ package main
 
 // import necessary packages
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"net"
 	"os"
@@ -46,6 +44,7 @@ func main() {
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
+	
 	var char string
 
 	hex_data := []byte{}
@@ -53,14 +52,13 @@ func handleConnection(conn net.Conn) {
 	history := []Insert{}
 
 	for i := 0; true; i++ {
-		buff := make([]byte, 9)
-		n, err := conn.Read(buff)
 
+		buff := make([]byte, 1)
+		n, err := conn.Read(buff)
 		if err != nil {
 			fmt.Println("Error:", err)
 			break
 		}
-
 		if i%9 == 0 {
 			char = string(buff[:n])
 			continue
@@ -70,33 +68,44 @@ func handleConnection(conn net.Conn) {
 
 		if i%9 == 4 {
 			data1, _ = strconv.ParseInt(byteToString(hex_data), 16, 64)
+			if char == "Q" {
+				fmt.Println("Hexdata", hex_data)
+			}
 			hex_data = nil
 		}
-		if i%9 == 8 {
-			fmt.Println(char, history)
 
+		if i%9 == 8 {
 			data2, _ = strconv.ParseInt(byteToString(hex_data), 16, 64)
+			if char == "Q" {
+				fmt.Println("Hexdata", hex_data)
+			}
 			if char == "I" {
 				history = append(history, Insert{data1, data2})
 			} else if char == "Q" {
 				n, total := int64(0), int64(0)
+				fmt.Println("| - Range :",data1, data2, "- | ", history)
 				for _, ins := range history {
 					if ins.Timestamp >= data1 && ins.Timestamp <= data2 {
 						total += ins.Price
 						n++
 					}
 				}
+
 				result_data := total
 				if n != 0 {
 					result_data = total / n
 				}
-				fmt.Println(result_data)
+				
 				result_bytes := numToHexToBytes(result_data)
-				fmt.Println(result_bytes)
+
+				fmt.Println("| ---- Results: ",result_data, result_bytes, n)
+				
 				if _, err := conn.Write(result_bytes); err != nil {
 					fmt.Printf("Writing error %s \n", err)
 				}
+				break
 			}
+			//fmt.Println(char, "| Decoded data:", history)			
 			hex_data = nil
 		}
 	}
@@ -121,12 +130,10 @@ func byteToString(bytes []byte) string {
 }
 
 func numToHexToBytes(num int64) []byte {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.LittleEndian, num)
-	if err != nil {
-		fmt.Println("binary.Write failed:", err)
-	}
-	res := make([]byte, 2)
-	res = append(res, buf.Bytes()...)
-	return res
+	hex_str := strconv.FormatInt(num, 16)
+	hex_num, _ := strconv.Atoi(hex_str)
+	bytes := make([]byte,4)
+
+	bytes[3] = byte(hex_num)	
+	return bytes
 }
