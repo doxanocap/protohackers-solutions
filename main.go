@@ -54,57 +54,6 @@ func main() {
 	}
 }
 
-func handleConnection(conn net.Conn, pool *Pool) {
-	address := conn.RemoteAddr()
-
-	defer func(conn net.Conn) {
-		err := conn.Close()
-		if err != nil {
-			log.Println("| --- ERROR.62 --- Closing error")
-		}
-	}(conn)
-
-	startMsg := "Welcome to Budget Chat! What shall I call you? \n"
-	if _, err := conn.Write([]byte(startMsg)); err != nil {
-		log.Println("| -- ERROR.39 --", err)
-	}
-
-	client := Client{}
-	scanner := bufio.NewScanner(conn)
-	if scanner.Scan() {
-		err := make(chan error)
-		client = Client{scanner.Text(), conn, err}
-		log.Println("| --- Connected to the remote address:", address, scanner.Text())
-		
-		pool.Register <- client
-		if chanErr := <-err; chanErr != nil {
-			log.Println("| --- ERROR -{ chan err }- ", chanErr)
-			return
-		}
-
-		defer func(conn net.Conn) {
-			pool.Unregister <- client
-		}(conn)
-	} else {
-		log.Println("| --- ERROR -{ no data were handled}-")
-	}
-
-	for scanner.Scan() {
-		pool.Messages <- Message{client, scanner.Text()}
-	}
-
-}
-
-func Server() *Pool {
-	newPool := &Pool{
-		Register:   make(chan Client),
-		Unregister: make(chan Client),
-		Clients:    map[Client]bool{},
-		Messages:   make(chan Message),
-	}
-	go Start(newPool)
-	return newPool
-}
 
 func Start(pool *Pool) {
 	for {
@@ -174,6 +123,58 @@ func Start(pool *Pool) {
 				}
 			}
 		}
+	}
+}
+
+func Server() *Pool {
+	newPool := &Pool{
+		Register:   make(chan Client),
+		Unregister: make(chan Client),
+		Clients:    map[Client]bool{},
+		Messages:   make(chan Message),
+	}
+	go Start(newPool)
+	return newPool
+}
+
+
+func handleConnection(conn net.Conn, pool *Pool) {
+	address := conn.RemoteAddr()
+
+	defer func(conn net.Conn) {
+		err := conn.Close()
+		if err != nil {
+			log.Println("| --- ERROR.62 --- Closing error")
+		}
+	}(conn)
+
+	startMsg := "Welcome to Budget Chat! What shall I call you? \n"
+	if _, err := conn.Write([]byte(startMsg)); err != nil {
+		log.Println("| -- ERROR.39 --", err)
+	}
+
+	client := Client{}
+	scanner := bufio.NewScanner(conn)
+	if scanner.Scan() {
+		err := make(chan error)
+		client = Client{scanner.Text(), conn, err}
+		log.Println("| --- Connected to the remote address:", address, scanner.Text())
+		
+		pool.Register <- client
+		if chanErr := <-err; chanErr != nil {
+			log.Println("| --- ERROR -{ chan err }- ", chanErr)
+			return
+		}
+
+		defer func(conn net.Conn) {
+			pool.Unregister <- client
+		}(conn)
+	} else {
+		log.Println("| --- ERROR -{ no data were handled}-")
+	}
+
+	for scanner.Scan() {
+		pool.Messages <- Message{client, scanner.Text()}
 	}
 }
 
