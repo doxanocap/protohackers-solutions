@@ -1,8 +1,8 @@
 package main
 
-// import necessary packages
 import (
-	"fmt"
+	"bufio"
+	"log"
 	"net"
 	"os"
 )
@@ -22,20 +22,19 @@ func main() {
 	if v := os.Getenv("ECHO_PORT"); v != "" {
 		port = v
 	}
-
-	tcp, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+	
+	tcp, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		fmt.Printf("can't listen on %s/tcp: %s", port, err)
-		return
+		log.Printf("Couldn't estabilish connection %s", err)
 	}
 	fmt.Println("Listening on port: ", port)
 
 	for {
 		conn, err := tcp.Accept()
 		if err != nil {
-			fmt.Printf("conn: %s \n", err)
-			return
+			log.Printf("Error in accepting connection %s", err)
 		}
+
 		go handleConnection(conn)
 	}
 }
@@ -43,7 +42,17 @@ func main() {
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	for i := 0; true; i++ {
+		for _,v := range words {	
+			if len(v) == 0 {
+				continue
+			}
+			if v[0] == '7' && len(v) > 25 && len(v) < 36 && isBoguscoin([]byte(v)) {
+				newMsg += "7YWHMfk9JZe0LM0g1ZauHuiSxhI "
+				continue
+			}
+			newMsg += v + " "
+		}
 
 	}
+	return isValid
 }
