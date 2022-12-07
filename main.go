@@ -5,17 +5,11 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
+	"sync"
 )
 
-type Insert struct {
-	Timestamp int32
-	Price     int32
-}
-
-type Query struct {
-	Mintime int32
-	Maxtime int32
-}
+var once sync.Once
 
 func main() {
 	port := "8080"
@@ -27,7 +21,8 @@ func main() {
 	if err != nil {
 		log.Printf("Couldn't estabilish connection %s", err)
 	}
-	fmt.Println("Listening on port: ", port)
+
+	log.Printf("Listening on port: %s \n", port)
 
 	for {
 		conn, err := tcp.Accept()
@@ -40,7 +35,28 @@ func main() {
 }
 
 func handleConnection(conn net.Conn) {
-	defer conn.Close()
+	address := conn.RemoteAddr()
+	log.Printf("Accepted from %s \n", address)
+
+	socket, err := net.Dial("tcp", "206.189.113.124:16963")
+	if err != nil {
+		log.Printf("Connecting error %s \n", err)
+	}
+	once = sync.Once{}
+	go ProxyChain(conn, socket)
+	ProxyChain(socket, conn)
+}
+
+func ProxyChain(first net.Conn, second net.Conn) {		
+	defer once.Do(func() { first.Close(); second.Close(); log.Printf("closed connection:") })
+
+	scanner := bufio.NewScanner(first) 
+	
+	for scanner.Scan() {
+		msg  := scanner.Text()
+
+		words := strings.Split(msg, " ")
+		newMsg := ""
 
 		for _,v := range words {	
 			if len(v) == 0 {
@@ -53,6 +69,21 @@ func handleConnection(conn net.Conn) {
 			newMsg += v + " "
 		}
 
+		log.Printf("From -{%s}- to -{%s}- | -{Message: %s }- ", first.RemoteAddr(), second.RemoteAddr(), newMsg)
+		if _, err := second.Write([]byte(newMsg[:len(newMsg)-1]+"\n")); err != nil {
+			log.Printf("Upstream writing error: %s \n",err)
+		}
+	}
+}
+
+func isBoguscoin(data []byte) bool {
+	isValid := true
+	for _, v := range data {
+		if v < 48 || (v > 57 && v < 65) || (v > 90 && v < 97) || v > 122 {
+			isValid = false
+			break
+		}
 	}
 	return isValid
 }
+
