@@ -1,6 +1,6 @@
-# fly.toml file generated for testdoxa on 2022-12-03T19:32:28+06:00
+# fly.toml file generated for testdoxa2 on 2022-12-07T20:02:10+06:00
 
-app = "testdoxa"
+app = "testdoxa2"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []

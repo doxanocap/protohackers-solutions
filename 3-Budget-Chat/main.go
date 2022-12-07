@@ -144,13 +144,13 @@ func handleConnection(conn net.Conn, pool *Pool) {
 	defer func(conn net.Conn) {
 		err := conn.Close()
 		if err != nil {
-			log.Println("| --- ERROR.62 --- Closing error")
+			log.Println("| --- ERROR --- Closing error")
 		}
 	}(conn)
 
 	startMsg := "Welcome to Budget Chat! What shall I call you? \n"
 	if _, err := conn.Write([]byte(startMsg)); err != nil {
-		log.Println("| -- ERROR.39 --", err)
+		log.Println("| --- ERROR --- ", err)
 	}
 
 	client := Client{}
