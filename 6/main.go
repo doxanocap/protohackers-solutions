@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -12,28 +11,32 @@ import (
 
 type Plate struct {
 	Plate     string
-	Timestamp int
-	Ticket    Ticket
+	Mile      uint16
+	Timestamp uint32
+	Limit     uint16
 }
 
 type Camera struct {
-	Road  int
-	Mile  int
-	Limit int
+	Road  uint16
+	Mile  uint16
+	Limit uint16
 }
 
 type Ticket struct {
 	Plate      string
-	Road       int
-	Mile1      int
-	Timestamp1 int
-	Mile2      int
-	Timestamp2 int
-	Speed      int
+	Road       uint16
+	Mile1      uint16
+	Timestamp1 uint32
+	Mile2      uint16
+	Timestamp2 uint32
+	Speed      float32
 }
 
-var Plates map[int][]Plate
-var Cameras map[int][]Camera
+var Plates map[uint16][]Plate
+var Cameras map[uint16][]Camera
+var Tickets map[uint16][]Ticket
+var Cars map[string]bool
+var Counter int
 
 func main() {
 	port := "8080"
@@ -48,8 +51,10 @@ func main() {
 
 	log.Printf("Listening on port: %s \n", port)
 
-	Plates = map[int][]Plate{}
-	Cameras = map[int][]Camera{}
+	Plates = map[uint16][]Plate{}
+	Cameras = map[uint16][]Camera{}
+	Tickets = map[uint16][]Ticket{}
+	Cars = map[string]bool{}
 
 	for {
 		conn, err := tcp.Accept()
@@ -57,158 +62,105 @@ func main() {
 			log.Printf("Error in accepting connection %s", err)
 		}
 
-		ch := make(chan string)
-		go handleConnection(conn, ch)
+		go handleConnection(conn)
 	}
 }
 
-func handleConnection(conn net.Conn, ch chan string) {
+func handleConnection(conn net.Conn) {
 	defer func() {
 		conn.Close()
 	}()
 
-	clientType := ""
-	camera := Camera{}
-	roads := []int{}
-	carName := ""
-	first := true
-	fmt.Println("QWEQEW")
+	fmt.Println("Client from", conn.RemoteAddr())
+	var clientType string
+	var camera Camera
+	var roads []uint16
+	tempCounter := 0
+
 	for {
+		buff := make([]byte, 1024)
 		if clientType == "Dispatcher" {
-			if first == true {
-				first = false
-				for _, roadId := range roads {
-					for i, plate := range Plates[roadId] {
-						if plate.Ticket.Speed >= Cameras[roadId][i].Limit {
-							plate.Ticket.Speed *= 100
-							fmt.Println(plate.Ticket)
-							msg := []byte{33, byte(len(plate.Ticket.Plate))}
-							msg = append(msg, []byte(plate.Ticket.Plate)...)
-							i = 2 + len(plate.Ticket.Plate)
-							temp := make([]byte, 2)
-							binary.BigEndian.PutUint16(temp[:], uint16(plate.Ticket.Road))
-							msg = append(msg, temp...)
-							temp = make([]byte, 2)
-
-							binary.BigEndian.PutUint16(temp[:], uint16(plate.Ticket.Mile1))
-							msg = append(msg, temp...)
-							temp = make([]byte, 4)
-
-							binary.BigEndian.PutUint32(temp[:], uint32(plate.Ticket.Timestamp1))
-							msg = append(msg, temp...)
-							temp = make([]byte, 2)
-
-							binary.BigEndian.PutUint16(temp[:], uint16(plate.Ticket.Mile2))
-							msg = append(msg, temp...)
-							temp = make([]byte, 4)
-
-							binary.BigEndian.PutUint32(temp[:], uint32(plate.Ticket.Timestamp2))
-							msg = append(msg, temp...)
-							temp = make([]byte, 2)
-
-							binary.BigEndian.PutUint16(temp[:], uint16(plate.Ticket.Speed))
-							msg = append(msg, temp...)
-							temp = make([]byte, 2)
-
-							fmt.Println(msg)
-							if _, err := conn.Write([]byte(msg)); err != nil {
-								fmt.Println("QWEQEWQE", err)
-							}
-						}
-					}
-				}
-				continue
-			}
-			select {
-			case msg1 := <-ch:
-				fmt.Println(msg1)
-				if msg1 == "Check" {
-					for _, roadId := range roads {
-						fmt.Println("rOADID", roadId)
-						for i, plate := range Plates[roadId] {
-							//fmt.Println(plate.Ticket, Cameras[roadId][i].Limit)
-							if plate.Ticket.Speed >= Cameras[roadId][i].Limit {
-								plate.Ticket.Speed *= 100
-								ticketString, _ := json.Marshal(plate.Ticket)
-								msg := "Ticket" + string(ticketString)
-								fmt.Println(msg)
-								if _, err := conn.Write([]byte(msg)); err != nil {
-									fmt.Println("QWEQEWQE", err)
-								}
-							}
-						}
-					}
+			fmt.Println(clientType)
+			for {
+				if Counter > tempCounter {
+					SendMsgDispathcer(roads, conn)
+					tempCounter = Counter
 				}
 			}
-			continue
 		}
 
-		buff := make([]byte, 1024)
-		time.Sleep(time.Millisecond * 200)
 		n, err := conn.Read(buff)
-
 		if err != nil {
 			fmt.Println(err)
 			break
 		}
 		buff = buff[:n]
-
-		if buff[0] == 64 {
-			fmt.Println("64: ", buff[1:5])
-			go Heartbeat(conn, buff[1:5])
+		fmt.Println(buff)
+		if len(buff) == 0 {
+			continue
 		}
 
-		fmt.Println("Buffer:", buff)
-
-		if buff[0] == 128 {
-			clientType = "Camera"
-
-			roadId := int(binary.BigEndian.Uint16(buff[1:3]))
-			camera = Camera{
-				Road:  roadId,
-				Mile:  int(binary.BigEndian.Uint16(buff[3:5])),
-				Limit: int(binary.BigEndian.Uint16(buff[5:7])),
+		switch buff[0] {
+		case 64:
+			fmt.Println("64: ", buff[1:5])
+			go Heartbeat(conn, buff[1:5])
+		case 32:
+			fmt.Println("| --- Buffer --- 1", buff)
+			for i := 0; i < len(buff); i++ {
+				fmt.Println("|---", camera, i)
+				if buff[i] == 32 && i < len(buff)-1 {
+					ln := int(buff[i+1])
+					HandlePlate(camera, buff[i:i+ln+6])
+					i += ln + 5
+				}
 			}
 
-			prevCam := Camera{}
-			prevPlate := Plate{}
-			if len(Cameras[roadId]) > 0 {
-				prevCam = Cameras[roadId][len(Cameras[roadId])-1]
-				prevPlate = Plates[roadId][len(Plates[roadId])-1]
+		case 128:
+			clientType = "Camera"
+
+			roadId := binary.BigEndian.Uint16(buff[1:3])
+			camera = Camera{
+				Road:  roadId,
+				Mile:  binary.BigEndian.Uint16(buff[3:5]),
+				Limit: binary.BigEndian.Uint16(buff[5:7]),
 			}
 
 			Cameras[roadId] = append(Cameras[roadId], camera)
 
-			buff = buff[7:]
-			ln := int(buff[1])
-
-			carName = string(buff[2 : 2+ln])
-			timeStamp := int(binary.BigEndian.Uint32(buff[2+ln:]))
-
-			plate := Plate{Plate: carName, Timestamp: timeStamp, Ticket: Ticket{}}
-			if prevCam.Road == 0 || prevPlate.Plate == "" {
-				Plates[roadId] = append(Plates[roadId], plate)
+			if len(buff) <= 7 {
 				continue
 			}
 
-			speed := (camera.Mile - prevCam.Mile) * 3600 / (timeStamp - prevPlate.Timestamp)
-			fmt.Println(speed)
-			plate.Ticket = GetTicket(roadId, prevCam.Mile, camera.Mile, prevPlate.Timestamp, timeStamp, carName, speed)
-			Plates[roadId] = append(Plates[roadId], plate)
-			ch <- "Check"
-		} else if buff[0] == 129 {
+			buff = buff[7:]
+
+			fmt.Println("| --- Buffer --- 2", buff)
+			for i := 0; i < len(buff); i++ {
+				fmt.Println("|---", camera, i)
+				if buff[i] == 32 && i < len(buff)-1 {
+					ln := int(buff[i+1])
+					HandlePlate(camera, buff[i:i+ln+6])
+					i += ln + 5
+				}
+			}
+
+		case 129:
 			clientType = "Dispatcher"
 			ln := int(buff[1])
-			buff = buff[2:]
+			temp := make([]byte, 1024)
+			if _, err := conn.Read(temp); err != nil {
+				fmt.Println("Reading 0x129", err)
+			}
+			temp = temp[:n]
+			fmt.Println("TEMP:", temp)
 			for i := 0; i < ln; i++ {
-				roads = append(roads, int(binary.BigEndian.Uint16(buff[2*i:2*i+2])))
+				roads = append(roads, binary.BigEndian.Uint16(temp[2*i:2*i+2]))
 			}
 			continue
 		}
 	}
 }
 
-func GetTicket(roadId, mile1, mile2, timestamp1, timestamp2 int, plate string, speed int) Ticket {
+func GetTicket(roadId, mile1, mile2 uint16, timestamp1, timestamp2 uint32, plate string, speed float32) Ticket {
 	ticket := Ticket{
 		Plate:      plate,
 		Road:       roadId,
@@ -235,4 +187,107 @@ func Heartbeat(conn net.Conn, data []byte) {
 		fmt.Println("Heartbeat")
 		time.Sleep(time.Second * time.Duration(interval/10))
 	}
+}
+
+func HandlePlate(camera Camera, buff []byte) {
+	roadId := camera.Road
+	ln := int(buff[1])
+
+	carName := string(buff[2 : ln+2])
+	timeStamp := binary.BigEndian.Uint32(buff[ln+2 : ln+6])
+
+	plate := Plate{Plate: carName, Timestamp: timeStamp, Mile: camera.Mile, Limit: camera.Limit}
+	fmt.Printf("| ---- NEW PLATE ---- ")
+	fmt.Print(plate)
+	fmt.Println("|")
+
+	Plates[roadId] = append(Plates[roadId], plate)
+
+	maxSpeed := float32(-1.0)
+	idx := -1
+
+	for i := 0; i < len(Plates[roadId]); i++ {
+		if Plates[roadId][i].Plate != plate.Plate || plate.Timestamp-Plates[roadId][i].Timestamp == 0 {
+			continue
+		}
+		if plate.Timestamp < Plates[roadId][i].Timestamp {
+			Plates[roadId][i].Timestamp, plate.Timestamp = plate.Timestamp, Plates[roadId][i].Timestamp
+		}
+		if plate.Mile < Plates[roadId][i].Mile {
+			Plates[roadId][i].Mile, plate.Mile = plate.Mile, Plates[roadId][i].Mile
+		}
+		speed := (float32(plate.Mile-Plates[roadId][i].Mile) * 3600) / float32(plate.Timestamp-Plates[roadId][i].Timestamp)
+		if speed > maxSpeed {
+			maxSpeed = speed
+			idx = i
+		}
+	}
+
+	if idx == -1 {
+		return
+	}
+
+	ticket := GetTicket(roadId, Plates[roadId][idx].Mile, plate.Mile, Plates[roadId][idx].Timestamp, plate.Timestamp, carName, maxSpeed)
+
+	fmt.Println("|")
+	fmt.Println("| ----Ticket --- ", ticket)
+	fmt.Println("|")
+	fmt.Printf("| ------- Car: %s ---- with speed %f while limit is %d \n\n", carName, maxSpeed, camera.Limit)
+	fmt.Println("|")
+
+	if maxSpeed >= 0.5+float32(camera.Limit) {
+		Tickets[roadId] = append(Tickets[roadId], ticket)
+		Counter++
+	}
+}
+
+func SendMsgDispathcer(roads []uint16, conn net.Conn) {
+	tempTicket := map[uint16][]Ticket{}
+	for _, roadId := range roads {
+		for _, ticket := range Tickets[roadId] {
+			if _, ok := Cars[ticket.Plate]; ok {
+				msg := []byte{16}
+				msg = append(msg, []byte("Error")...)
+				if _, err := conn.Write(msg); err != nil {
+					fmt.Println("Writing msg1", err)
+				}
+				tempTicket[roadId] = append(tempTicket[roadId], ticket)
+				break
+			}
+			ticket.Speed *= 100
+			ticket.Speed = float32(int(ticket.Speed))
+			msg := GetTicketBytes(ticket)
+			if _, err := conn.Write(msg); err != nil {
+				fmt.Println("Writing msg2", err)
+			}
+			Cars[ticket.Plate] = true
+		}
+	}
+	Tickets = tempTicket
+}
+
+func GetTicketBytes(ticket Ticket) []byte {
+	msg := []byte{33, byte(len(ticket.Plate))}
+	msg = append(msg, []byte(ticket.Plate)...)
+
+	temp, temp2 := make([]byte, 2), make([]byte, 4)
+	binary.BigEndian.PutUint16(temp[:], ticket.Road)
+	msg = append(msg, temp...)
+	temp = make([]byte, 2)
+	binary.BigEndian.PutUint16(temp[:], ticket.Mile1)
+	msg = append(msg, temp...)
+	temp = make([]byte, 2)
+	binary.BigEndian.PutUint32(temp2[:], ticket.Timestamp1)
+	msg = append(msg, temp2...)
+	temp2 = make([]byte, 4)
+	binary.BigEndian.PutUint16(temp[:], ticket.Mile2)
+	msg = append(msg, temp...)
+	temp = make([]byte, 2)
+	binary.BigEndian.PutUint32(temp2[:], ticket.Timestamp2)
+	msg = append(msg, temp2...)
+	temp2 = make([]byte, 4)
+	binary.BigEndian.PutUint16(temp[:], uint16(ticket.Speed))
+	msg = append(msg, temp...)
+	temp = make([]byte, 2)
+	return msg
 }

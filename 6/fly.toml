@@ -1,0 +1,32 @@
+# fly.toml file generated for testdox on 2022-12-12T23:37:17+06:00
+
+app = "testdox"
+kill_signal = "SIGINT"
+kill_timeout = 5
+processes = []
+
+[build]
+  builder = "paketobuildpacks/builder:base"
+  buildpacks = ["gcr.io/paketo-buildpacks/go"]
+
+[env]
+  ECHO_PORT = "5000"
+  PORT = "8080"
+
+[experimental]
+  allowed_public_ports = []
+  auto_rollback = true
+
+[[services]]
+  internal_port = 5000
+  protocol = "udp"
+
+  [[services.ports]]
+    port = "5000"
+
+[[services]]
+  internal_port = 5000
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = "5000"
