@@ -80,9 +80,9 @@ func handleConnection(conn net.Conn) {
 	for {
 		buff := make([]byte, 1024)
 		if clientType == "Dispatcher" {
-			fmt.Println(clientType)
 			for {
 				if Counter > tempCounter {
+					fmt.Println(clientType)
 					SendMsgDispathcer(roads, conn)
 					tempCounter = Counter
 				}
@@ -94,6 +94,7 @@ func handleConnection(conn net.Conn) {
 			fmt.Println(err)
 			break
 		}
+
 		buff = buff[:n]
 		fmt.Println(buff)
 		if len(buff) == 0 {
@@ -146,14 +147,9 @@ func handleConnection(conn net.Conn) {
 		case 129:
 			clientType = "Dispatcher"
 			ln := int(buff[1])
-			temp := make([]byte, 1024)
-			if _, err := conn.Read(temp); err != nil {
-				fmt.Println("Reading 0x129", err)
-			}
-			temp = temp[:n]
-			fmt.Println("TEMP:", temp)
+			buff = buff[2:]
 			for i := 0; i < ln; i++ {
-				roads = append(roads, binary.BigEndian.Uint16(temp[2*i:2*i+2]))
+				roads = append(roads, binary.BigEndian.Uint16(buff[2*i:2*i+2]))
 			}
 			continue
 		}
@@ -229,13 +225,13 @@ func HandlePlate(camera Camera, buff []byte) {
 
 	ticket := GetTicket(roadId, Plates[roadId][idx].Mile, plate.Mile, Plates[roadId][idx].Timestamp, plate.Timestamp, carName, maxSpeed)
 
-	fmt.Println("|")
-	fmt.Println("| ----Ticket --- ", ticket)
-	fmt.Println("|")
-	fmt.Printf("| ------- Car: %s ---- with speed %f while limit is %d \n\n", carName, maxSpeed, camera.Limit)
-	fmt.Println("|")
-
 	if maxSpeed >= 0.5+float32(camera.Limit) {
+
+		fmt.Println("|")
+		fmt.Println("| ----Ticket --- ", ticket)
+		fmt.Println("|")
+		fmt.Printf("| ------- Car: %s ---- with speed %f while limit is %d \n\n", carName, maxSpeed, camera.Limit)
+		fmt.Println("|")
 		Tickets[roadId] = append(Tickets[roadId], ticket)
 		Counter++
 	}
@@ -252,7 +248,9 @@ func SendMsgDispathcer(roads []uint16, conn net.Conn) {
 					fmt.Println("Writing msg1", err)
 				}
 				tempTicket[roadId] = append(tempTicket[roadId], ticket)
-				break
+				continue
+			} else {
+				fmt.Println(ticket.Plate)
 			}
 			ticket.Speed *= 100
 			ticket.Speed = float32(int(ticket.Speed))
